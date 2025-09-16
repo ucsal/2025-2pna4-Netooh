@@ -10,54 +10,94 @@ import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 
-class DrawingPanel extends JPanel {
+public class DrawingPanel extends JPanel {
 
-    private static final long serialVersionUID = 1L;
-    private static final int DEFAULT_SIZE = 60;
-    private final List<Shape> shapes = new ArrayList<>();
-    private Point startDrag = null;
+    private static class Figure {
+        Rectangle rect;
+        Color color;
 
-    DrawingPanel() {
-        
-        setBackground(Color.WHITE);
-        setOpaque(true);
-        setDoubleBuffered(true);
+        Figure(Rectangle rect, Color color) {
+            this.rect = rect;
+            this.color = color;
+        }
+    }
 
-        var mouse = new MouseAdapter() {
-            @Override public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 1 && startDrag == null) {
-                    int size = Math.max(Math.min(DEFAULT_SIZE, DEFAULT_SIZE), 10);
-                    Shape s =  new Ellipse2D.Double(e.getPoint().x, e.getPoint().y, size, size);
-                    //return new Rectangle2D.Double(e.getPoint().x, e.getPoint().y, Math.max(DEFAULT_SIZE, 10), Math.max(DEFAULT_SIZE, 10));
-                    shapes.add(s);
-                    repaint();
+    private List<Figure> figures = new ArrayList<>();
+    private Figure selected = null;
+    private Point dragStart = null;
+    private Rectangle previewRect = null;
+    private Color currentColor = Color.BLACK;
+
+    public DrawingPanel() {
+        MouseAdapter mouseHandler = new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                for (Figure f : figures) {
+                    if (f.rect.contains(e.getPoint())) {
+                        selected = f;
+                        dragStart = e.getPoint();
+                        return;
+                    }
                 }
+                dragStart = e.getPoint();
+                previewRect = new Rectangle(dragStart);
+                selected = null;
+            }
+
+            @Override
+            public void mouseDragged(MouseEvent e) {
+
+                if (selected != null && dragStart != null) {
+                    int dx = e.getX() - dragStart.x;
+                    int dy = e.getY() - dragStart.y;
+                    selected.rect.translate(dx, dy);
+                    dragStart = e.getPoint();
+
+                } else if (previewRect != null) {
+                    previewRect.setBounds(
+                            Math.min(dragStart.x, e.getX()),
+                            Math.min(dragStart.y, e.getY()),
+                            Math.abs(e.getX() - dragStart.x),
+                            Math.abs(e.getY() - dragStart.y)
+                    );
+                }
+                repaint();
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (previewRect != null && previewRect.width > 0 && previewRect.height > 0) {
+                    figures.add(new Figure(new Rectangle(previewRect), currentColor));
+                }
+                previewRect = null;
+                dragStart = null;
+                repaint();
             }
         };
-        addMouseListener(mouse);        
-        addMouseMotionListener(mouse);
 
+        addMouseListener(mouseHandler);
+        addMouseMotionListener(mouseHandler);
     }
 
-    void clear() {
-        shapes.clear();
-        repaint();
+    public void setCurrentColor(Color c) {
+        this.currentColor = c;
     }
 
-    @Override protected void paintComponent(Graphics g) {
+    @Override
+    protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        Graphics2D g2 = (Graphics2D) g.create();
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-        for (Shape s : shapes) {
-            g2.setColor(new Color(30,144,255));
-            g2.fill(s);
-            g2.setColor(new Color(0,0,0,70));
-            g2.setStroke(new BasicStroke(1.2f));
-            g2.draw(s);
+        for (Figure f : figures) {
+            g.setColor(f.color);
+            g.fillRect(f.rect.x, f.rect.y, f.rect.width, f.rect.height);
         }
 
-        g2.dispose();
+        if (previewRect != null) {
+            Graphics2D g2 = (Graphics2D) g;
+            g2.setColor(currentColor);
+            float[] dash = {4f, 4f};
+            g2.setStroke(new BasicStroke(1, BasicStroke.CAP_BUTT,
+                    BasicStroke.JOIN_MITER, 1f, dash, 0f));
+            g2.draw(previewRect);
+        }
     }
-
 }

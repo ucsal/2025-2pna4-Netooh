@@ -2,24 +2,36 @@ package br.com.mariojp.figureeditor;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 
 public class App {
+
+    private static Color currentColor = Color.BLACK;
+
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            try {
-                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-            } catch (Exception ignored) {}
-
-            JFrame frame = new JFrame("Figure Editor — Clique para inserir figuras");
-            frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+            JFrame frame = new JFrame("Figure Editor Swing");
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            frame.setSize(800, 600);
 
             DrawingPanel panel = new DrawingPanel();
+            panel.setBackground(Color.WHITE);
 
-            frame.setLayout(new BorderLayout());
+            JToolBar toolBar = new JToolBar();
+            JButton colorButton = new JButton("Cor...");
+            colorButton.addActionListener((ActionEvent e) -> {
+                Color newColor = JColorChooser.showDialog(frame, "Escolha a cor", currentColor);
+                if (newColor != null) {
+                    currentColor = newColor;
+                    panel.setCurrentColor(newColor);
+                }
+            });
+
+            toolBar.add(colorButton);
+
+            frame.add(toolBar, BorderLayout.NORTH);
             frame.add(panel, BorderLayout.CENTER);
 
-            frame.setSize(900, 600);
-            frame.setLocationRelativeTo(null);
             frame.setVisible(true);
         });
     }
